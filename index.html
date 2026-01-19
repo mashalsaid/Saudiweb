@@ -468,7 +468,7 @@
         }
         function likeComment(key) { const heartElem = document.getElementById(`heart-${key}`); if(heartElem) { heartElem.classList.add('heart-pop'); setTimeout(() => heartElem.classList.remove('heart-pop'), 300); } db.ref('comments/' + key + '/likes').transaction((curr) => (curr || 0) + 1); playSound(); }
         function checkAdmin() {
-            if (document.getElementById('admin-pass').value === 'meme2003') {
+            if (document.getElementById('admin-pass').value === 'nancy2003') {
                 isAdmin = true; document.getElementById('admin-login-section').classList.add('hidden'); document.getElementById('admin-panel-section').classList.remove('hidden');
                 db.ref('settings/welcome').once('value', (snapshot) => { const data = snapshot.val(); if(data) { document.getElementById('welcome-active').checked = data.enabled; document.getElementById('welcome-msg-input').value = data.text; document.getElementById('welcome-link-input').value = data.link; document.getElementById('welcome-once').checked = data.showOnce; } });
                 alert('أهلاً بك يا زعيم!'); loadComments(); loadGallery(); document.getElementById('upload-control-panel').classList.remove('hidden');
