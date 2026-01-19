@@ -1,1 +1,516 @@
 
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>موقع سـعـودي</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class', // تفعيل الوضع الليلي اليدوي
+            theme: {
+                extend: {
+                    colors: { 'neo-blue': '#0056b3', 'neo-bg': '#e3f2fd' },
+                    boxShadow: {
+                        'neo': '6px 6px 0px 0px rgba(0,0,0,1)',
+                        'neo-hover': '10px 10px 0px 0px rgba(0,0,0,1)',
+                        'neo-dark': '6px 6px 0px 0px rgba(255,255,255,0.8)', // ظل أبيض للوضع الليلي
+                    }
+                }
+            }
+        }
+    </script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
+    <style>
+        body { font-family: 'Cairo', sans-serif; overflow-x: hidden; transition: background-color 0.3s, color 0.3s; }
+        
+        #home {
+            height: 100vh; width: 100%;
+            background-image: url('profile.jpg'); 
+            background-size: cover; background-position: center;
+            position: relative; display: flex; flex-direction: column;
+            justify-content: center; align-items: center;
+        }
+        .hero-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.6); }
+        .hero-content { position: relative; z-index: 10; text-align: center; color: white; }
+        
+        .neo-btn {
+            background-color: #3b82f6; color: white; font-weight: bold;
+            border: 3px solid black; box-shadow: 5px 5px 0px black; transition: 0.2s; cursor: pointer;
+        }
+        /* تعديل الزر للوضع الليلي */
+        .dark .neo-btn { border-color: white; box-shadow: 5px 5px 0px white; color: white; }
+        
+        .neo-btn:hover { box-shadow: 8px 8px 0px black; transform: translate(-2px, -2px); }
+        .dark .neo-btn:hover { box-shadow: 8px 8px 0px white; }
+        .neo-btn:active { box-shadow: 0px 0px 0px black; transform: translate(0px, 0px); }
+        .dark .neo-btn:active { box-shadow: 0px 0px 0px white; }
+
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        @keyframes pop { 0% { transform: scale(1); } 50% { transform: scale(1.4); } 100% { transform: scale(1); } }
+        .heart-pop { animation: pop 0.3s ease-in-out; }
+        .avatar-container svg { width: 100%; height: 100%; filter: saturate(1.1); }
+        .noselect { user-select: none; -webkit-user-select: none; }
+        .loader { border: 4px solid #f3f3f3; border-top: 4px solid #3b82f6; border-radius: 50%; width: 25px; height: 25px; animation: spin 1s linear infinite; margin: 10px auto; display: none; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        
+        .star-rating i { cursor: pointer; transition: color 0.2s; }
+        .star-rating i.active { color: #FCD34D; }
+        .star-rating i.inactive { color: #D1D5DB; }
+        .dark .star-rating i.inactive { color: #4B5563; } /* نجوم رمادية غامقة في الوضع الليلي */
+    </style>
+</head>
+<body class="bg-white text-gray-900 dark:bg-gray-900 dark:text-gray-100">
+
+    <div id="welcome-modal" class="fixed inset-0 bg-black bg-opacity-90 z-[5000] hidden flex items-center justify-center p-4">
+        <div class="bg-yellow-300 border-4 border-black p-6 w-full max-w-md shadow-[8px_8px_0px_#fff] relative text-center dark:bg-gray-800 dark:border-white dark:text-white">
+            <h3 class="text-2xl font-black mb-4 border-b-4 border-black dark:border-white pb-2">تنبيه هام 👋</h3>
+            <p id="welcome-text" class="text-lg font-bold mb-6">أهلاً بك في موقعي!</p>
+            <a id="welcome-btn" href="#" target="_blank" class="hidden block w-full bg-blue-600 text-white font-bold py-3 border-2 border-black dark:border-white shadow-neo hover:shadow-none mb-4 transition-all">فتح الرابط <i class="fas fa-external-link-alt ml-2"></i></a>
+            <button onclick="closeWelcomeModal()" class="w-full bg-red-500 text-white font-bold py-2 border-2 border-black dark:border-white hover:bg-red-600 transition-all">إغلاق</button>
+        </div>
+    </div>
+
+    <header class="fixed w-full top-0 z-50 bg-white dark:bg-gray-800 border-b-4 border-black dark:border-gray-600 shadow-md transition-colors duration-300">
+        <nav class="flex justify-between items-center max-w-6xl mx-auto p-4">
+            <div class="font-black text-2xl text-blue-700 dark:text-blue-400 cursor-pointer select-none hover:text-blue-900 transition-colors" onclick="document.getElementById('admin-modal').classList.remove('hidden')" title="Admin Login">
+                Saudi Portfolio
+            </div>
+            
+            <div class="flex items-center gap-6">
+                <button onclick="toggleDarkMode()" class="text-2xl hover:scale-110 transition-transform p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700" title="تغيير الوضع">
+                    <i id="theme-icon" class="fas fa-moon text-gray-800 dark:text-yellow-300"></i>
+                </button>
+
+                <ul class="flex gap-6 font-bold list-none hidden md:flex">
+                    <li><a href="#home" class="hover:text-blue-600 dark:hover:text-blue-400">الرئيسية</a></li>
+                    <li><a href="#photo" class="hover:text-blue-600 dark:hover:text-blue-400">الصور</a></li>
+                    <li><a href="#contact" class="hover:text-blue-600 dark:hover:text-blue-400">تواصل</a></li>
+                    <li><a href="#guestbook" class="hover:text-blue-600 dark:hover:text-blue-400">التعليقات</a></li>
+                </ul>
+            </div>
+        </nav>
+    </header>
+
+    <section id="home">
+        <div class="hero-overlay"></div>
+        <div class="hero-content flex flex-col items-center gap-6">
+            <h1 class="text-6xl md:text-8xl font-black border-4 border-white p-4 backdrop-blur-sm">سـعـودي</h1>
+            <button onclick="openModal()" class="neo-btn text-xl px-8 py-3 mt-4 flex items-center gap-3"><i class="fas fa-pen-fancy"></i> أكتب تعليق للذكرى</button>
+        </div>
+    </section>
+
+    <section id="photo" class="py-20 bg-white dark:bg-gray-900 text-center border-t-4 border-black dark:border-gray-700 transition-colors">
+        <div class="flex justify-center items-center gap-2 mb-10">
+            <h2 class="text-3xl font-bold text-blue-800 dark:text-blue-300">معرض الصور</h2>
+        </div>
+        <div class="max-w-4xl mx-auto bg-white dark:bg-gray-800 p-4 border-4 border-black dark:border-gray-500 shadow-neo dark:shadow-none rounded-none transition-colors">
+            <div id="upload-control-panel" class="hidden mb-6 bg-blue-50 dark:bg-gray-700 border-2 border-dashed border-blue-500 p-4">
+                <h4 class="font-bold mb-2 text-blue-800 dark:text-blue-300">✨ لوحة التحكم: رفع صورة جديدة</h4>
+                <div class="flex flex-col md:flex-row gap-2 items-center">
+                    <input type="file" id="gallery-upload" accept="image/*" class="w-full text-sm border-2 border-black p-1 bg-white dark:bg-gray-600 dark:border-gray-400 dark:text-white">
+                    <button onclick="uploadToImgBB()" class="bg-green-600 text-white font-bold py-2 px-6 border-2 border-black dark:border-white shadow-neo hover:shadow-none transition-all whitespace-nowrap">رفع الآن <i class="fas fa-cloud-upload-alt ml-1"></i></button>
+                </div>
+                <div class="loader" id="upload-loader"></div>
+                <p class="text-xs text-gray-500 dark:text-gray-300 mt-2 font-bold text-right">* الصورة ستظهر تلقائياً في المعرض بالأسفل.</p>
+            </div>
+            <div class="main-display mb-4 relative">
+                <img id="current-img" src="https://via.placeholder.com/800x500?text=جاري+التحميل..." class="w-full h-96 object-cover border-2 border-black dark:border-gray-500">
+                <button id="delete-img-btn" onclick="deleteCurrentImage()" class="hidden absolute top-2 right-2 bg-red-600 text-white p-2 border-2 border-black font-bold hover:bg-red-700 text-sm shadow-neo"><i class="fas fa-trash"></i> حذف هذه الصورة</button>
+            </div>
+            <div id="thumbnails-container" class="thumbnails flex gap-4 overflow-x-auto pb-4 min-h-[100px] items-center justify-center">
+                <p class="text-gray-400 font-bold">جاري جلب الصور...</p>
+            </div>
+        </div>
+    </section>
+
+    <section id="contact" class="py-16 text-center bg-white dark:bg-gray-900 transition-colors">
+        <h2 class="text-3xl font-bold mb-8 dark:text-white">تواصل معي</h2>
+        <div class="flex justify-center gap-6 flex-wrap">
+            <a href="#" class="w-16 h-16 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 text-2xl hover:bg-blue-600 hover:text-white transition-all border-2 border-transparent hover:border-black"><i class="fab fa-whatsapp"></i></a>
+            <a href="#" class="w-16 h-16 rounded-full bg-pink-100 flex items-center justify-center text-pink-600 text-2xl hover:bg-pink-600 hover:text-white transition-all border-2 border-transparent hover:border-black"><i class="fab fa-instagram"></i></a>
+            <a href="#" class="w-16 h-16 rounded-full bg-yellow-100 flex items-center justify-center text-yellow-500 text-2xl hover:bg-yellow-400 hover:text-black transition-all border-2 border-transparent hover:border-black"><i class="fab fa-snapchat"></i></a>
+        </div>
+    </section>
+
+    <section id="guestbook" class="bg-blue-50 dark:bg-gray-800 py-16 border-t-4 border-black dark:border-gray-600 min-h-[50vh] transition-colors">
+        <div class="max-w-4xl mx-auto px-4 flex flex-col items-center">
+            <h2 id="guestbook-title" class="text-4xl font-black text-center mb-6 select-none cursor-pointer border-b-4 border-black dark:border-white inline-block dark:text-white">سجل الزوار</h2>
+            <button onclick="openModal()" class="neo-btn text-lg px-6 py-2 mb-10 flex items-center gap-2 bg-green-500"><i class="fas fa-plus"></i> أضف تعليقك هنا</button>
+            <div id="comments-container" class="grid grid-cols-1 md:grid-cols-2 gap-6 w-full mb-6">
+                <div class="text-center w-full col-span-full text-gray-500 dark:text-gray-300 font-bold">جاري تحميل التعليقات...</div>
+            </div>
+            <p class="text-gray-500 dark:text-gray-300 font-bold text-sm bg-white dark:bg-gray-700 px-4 py-2 border-2 border-black dark:border-gray-500 shadow-neo dark:shadow-none">للتعديل او حذف خليك ضاغط ع تعليقك</p>
+        </div>
+    </section>
+
+    <div id="comment-modal" class="fixed inset-0 bg-black bg-opacity-80 z-[2000] hidden flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-gray-800 border-4 border-black dark:border-gray-500 shadow-[10px_10px_0px_white] dark:shadow-[10px_10px_0px_gray] w-full max-w-md p-6 relative dark:text-white">
+            <button onclick="closeModal()" class="absolute top-2 right-2 text-2xl font-bold hover:text-red-600">&times;</button>
+            <h3 class="text-2xl font-black mb-6 text-center border-b-4 border-black dark:border-gray-500 pb-2">إضافة توقيع</h3>
+            <div id="step-1">
+                <label class="block font-bold mb-2">اسمك (حد أقصى 11 حرف)</label>
+                <input type="text" id="input-name" maxlength="11" class="w-full border-4 border-black dark:border-gray-500 p-2 mb-4 font-bold bg-yellow-100 dark:bg-gray-700 dark:text-white focus:bg-white dark:focus:bg-gray-600 outline-none" placeholder="الاسم...">
+                <label class="block font-bold mb-2">اختر شكلك (Avatar)</label>
+                <div class="grid grid-cols-3 gap-2 mb-6" id="avatar-grid"></div>
+                <button onclick="goToStep2()" class="w-full neo-btn py-2 text-lg">التالي</button>
+            </div>
+            <div id="step-2" class="hidden">
+                <label class="block font-bold mb-1">قيّم الموقع:</label>
+                <div class="flex gap-2 justify-center mb-4 text-3xl star-rating" id="rating-stars">
+                    <i class="fas fa-star active" onclick="setRating(1)"></i>
+                    <i class="fas fa-star active" onclick="setRating(2)"></i>
+                    <i class="fas fa-star active" onclick="setRating(3)"></i>
+                    <i class="fas fa-star active" onclick="setRating(4)"></i>
+                    <i class="fas fa-star active" onclick="setRating(5)"></i>
+                </div>
+                
+                <label class="block font-bold mb-2">رسالتك (75 حرف فقط)</label>
+                <textarea id="input-msg" maxlength="75" class="w-full border-4 border-black dark:border-gray-500 p-2 mb-4 font-bold bg-green-100 dark:bg-gray-700 dark:text-white h-24 resize-none focus:bg-white dark:focus:bg-gray-600 outline-none" placeholder="اكتب شيئاً..."></textarea>
+                <div class="flex gap-2">
+                    <button onclick="backToStep1()" class="w-1/3 border-4 border-black dark:border-gray-500 font-bold hover:bg-gray-200 dark:hover:bg-gray-600 dark:text-white">رجوع</button>
+                    <button onclick="submitComment()" class="w-2/3 neo-btn py-2 text-lg bg-green-500">نشر التعليق</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="admin-modal" class="fixed inset-0 bg-red-900 bg-opacity-90 z-[3000] hidden flex items-center justify-center p-4 overflow-y-auto">
+        <div class="bg-white dark:bg-gray-800 border-4 border-black dark:border-gray-500 p-8 text-center shadow-neo w-full max-w-md relative my-auto dark:text-white">
+            <button onclick="document.getElementById('admin-modal').classList.add('hidden')" class="absolute top-2 right-2 font-bold text-xl">X</button>
+            <h3 class="text-xl font-black mb-4 border-b-2 border-black dark:border-gray-500 pb-2">منطقة الإدارة</h3>
+            <div id="admin-login-section">
+                <input type="password" id="admin-pass" class="border-4 border-black dark:border-gray-500 p-2 mb-4 w-full text-center dark:bg-gray-700" placeholder="كلمة السر">
+                <button onclick="checkAdmin()" class="neo-btn w-full py-2">دخول</button>
+            </div>
+            <div id="admin-panel-section" class="hidden text-left">
+                <div class="bg-yellow-100 dark:bg-gray-700 border-2 border-black dark:border-gray-500 p-3 mb-6">
+                    <h4 class="font-bold text-center mb-2 border-b border-black dark:border-gray-500 pb-1">🔔 إعدادات الرسالة الترحيبية</h4>
+                    <div class="flex items-center justify-between mb-2">
+                        <label class="font-bold text-sm">تفعيل الرسالة:</label>
+                        <input type="checkbox" id="welcome-active" class="w-5 h-5 accent-green-600">
+                    </div>
+                    <label class="block text-xs font-bold mb-1">نص الرسالة:</label>
+                    <textarea id="welcome-msg-input" class="w-full border-2 border-black dark:border-gray-500 dark:bg-gray-600 p-1 text-sm h-16 mb-2"></textarea>
+                    <label class="block text-xs font-bold mb-1">رابط الزر (اختياري):</label>
+                    <input type="text" id="welcome-link-input" placeholder="https://..." class="w-full border-2 border-black dark:border-gray-500 dark:bg-gray-600 p-1 text-sm mb-2">
+                    <div class="flex items-center justify-between mb-4">
+                        <label class="font-bold text-sm">عرض مرة واحدة لكل زائر؟</label>
+                        <input type="checkbox" id="welcome-once" class="w-5 h-5 accent-blue-600">
+                    </div>
+                    <button onclick="saveWelcomeSettings()" class="w-full bg-black dark:bg-gray-900 text-white font-bold py-2 hover:bg-gray-800">حفظ الإعدادات</button>
+                </div>
+                <button onclick="document.getElementById('admin-modal').classList.add('hidden')" class="text-red-600 dark:text-red-400 underline font-bold w-full text-center mt-2">إغلاق اللوحة</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="edit-modal" class="fixed inset-0 bg-blue-100 bg-opacity-90 z-[3000] hidden flex items-center justify-center">
+        <div class="bg-white dark:bg-gray-800 border-4 border-black dark:border-gray-500 p-6 w-96 shadow-neo relative max-h-[90vh] overflow-y-auto dark:text-white">
+            <h3 class="font-black mb-4 text-center text-xl border-b-2 border-black dark:border-gray-500 pb-2">تعديل التعليق</h3>
+            <label class="block font-bold mb-1 text-sm">تعديل الاسم:</label>
+            <input id="edit-name" class="border-2 border-black dark:border-gray-500 dark:bg-gray-700 w-full mb-3 p-2" placeholder="الاسم">
+            <label class="block font-bold mb-1 text-sm">تعديل الصورة:</label>
+            <div id="edit-avatar-grid" class="grid grid-cols-3 gap-2 mb-4"></div>
+            
+            <label class="block font-bold mb-1 text-sm">تعديل التقييم:</label>
+            <div class="flex gap-2 justify-center mb-3 text-2xl star-rating" id="edit-rating-stars"></div>
+
+            <label class="block font-bold mb-1 text-sm">تعديل الرسالة:</label>
+            <textarea id="edit-msg" maxlength="75" class="border-2 border-black dark:border-gray-500 dark:bg-gray-700 w-full mb-3 p-2 h-20 resize-none" placeholder="الرسالة"></textarea>
+            
+            <div id="admin-likes-field" class="hidden mb-3">
+                <label class="text-xs font-bold">عدد اللايكات (أدمن):</label>
+                <input id="edit-likes" type="number" class="border-2 border-black w-full p-1 dark:bg-gray-700">
+            </div>
+            <input type="hidden" id="edit-id">
+            <div class="flex flex-col gap-2">
+                <button onclick="saveEdit()" class="bg-blue-500 text-white font-bold p-2 w-full border-2 border-black dark:border-white neo-btn">حفظ التعديلات</button>
+                <button onclick="deleteCommentFromModal()" class="bg-red-500 text-white font-bold p-2 w-full border-2 border-black dark:border-white neo-btn">إزالة التعليق</button>
+                <button onclick="document.getElementById('edit-modal').classList.add('hidden')" class="text-sm underline font-bold w-full mt-2">إلغاء</button>
+            </div>
+        </div>
+    </div>
+
+    <footer class="bg-black text-white text-center p-6 mt-0 border-t-4 border-blue-600 dark:border-blue-900">
+        <p class="font-bold">Powered by: <span class="text-blue-400">Mo64 Ai</span> | Made by: 64Group</p>
+    </footer>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyDrVSLWqC2xfos6_1Q1c7vqXtR94wzgu6o",
+            authDomain: "saudiweb-6e18b.firebaseapp.com",
+            databaseURL: "https://saudiweb-6e18b-default-rtdb.firebaseio.com",
+            projectId: "saudiweb-6e18b",
+            storageBucket: "saudiweb-6e18b.firebasestorage.app",
+            messagingSenderId: "829745180478",
+            appId: "1:829745180478:web:840153d99c4c69d1bd466f",
+            measurementId: "G-2QZBSTN093"
+        };
+
+        const IMGBB_API_KEY = "b9f47c492ffb8f226378f28a4c371d90";
+
+        let db;
+        try {
+            firebase.initializeApp(firebaseConfig);
+            db = firebase.database();
+            loadComments();
+            loadGallery();
+            checkWelcomeMessage();
+            initTheme();
+        } catch (e) { console.error("Firebase Error:", e); }
+
+        // --- Dark Mode Logic ---
+        function initTheme() {
+            if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                document.documentElement.classList.add('dark');
+                document.getElementById('theme-icon').classList.replace('fa-moon', 'fa-sun');
+            } else {
+                document.documentElement.classList.remove('dark');
+                document.getElementById('theme-icon').classList.replace('fa-sun', 'fa-moon');
+            }
+        }
+
+        function toggleDarkMode() {
+            if (document.documentElement.classList.contains('dark')) {
+                document.documentElement.classList.remove('dark');
+                localStorage.theme = 'light';
+                document.getElementById('theme-icon').classList.replace('fa-sun', 'fa-moon');
+            } else {
+                document.documentElement.classList.add('dark');
+                localStorage.theme = 'dark';
+                document.getElementById('theme-icon').classList.replace('fa-moon', 'fa-sun');
+            }
+        }
+
+        // --- Avatars ---
+        const avatars = [
+            `<svg viewBox="0 0 64 64" class="w-full h-full"><circle cx="32" cy="32" r="30" fill="#e3f2fd" stroke="#000" stroke-width="2"/><path d="M14 26 Q32 10 50 26 L50 40 Q32 50 14 40 Z" fill="#fff" stroke="#000" stroke-width="2"/><path d="M16 26 Q32 14 48 26" fill="none" stroke="#d32f2f" stroke-width="2" stroke-dasharray="4,2"/><circle cx="28" cy="34" r="2" fill="#000"/><circle cx="36" cy="34" r="2" fill="#000"/><path d="M30 40 Q32 42 34 40" stroke="#000" stroke-width="2" fill="none"/></svg>`,
+            `<svg viewBox="0 0 64 64" class="w-full h-full"><circle cx="32" cy="32" r="30" fill="#fff9c4" stroke="#000" stroke-width="2"/><path d="M10 28 Q32 6 54 28 Q56 34 54 38 Q32 32 10 38 Q8 34 10 28 Z" fill="#fff" stroke="#000" stroke-width="2"/><path d="M12 30 Q32 22 52 30" fill="none" stroke="#e0e0e0" stroke-width="2"/><path d="M20 36 Q24 34 28 36" stroke="#000" stroke-width="3" fill="none" stroke-linecap="round"/><path d="M36 36 Q40 34 44 36" stroke="#000" stroke-width="3" fill="none" stroke-linecap="round"/><circle cx="24" cy="40" r="2" fill="#000"/><circle cx="40" cy="40" r="2" fill="#000"/><path d="M32 44 C 20 44, 14 48, 12 42 C 14 52, 24 50, 32 46 C 40 50, 50 52, 52 42 C 50 48, 44 44, 32 44 Z" fill="#000"/><path d="M28 52 Q32 50 36 52" stroke="#000" stroke-width="2" fill="none" stroke-linecap="round"/><path d="M14 58 Q32 54 50 58 L50 62 L14 62 Z" fill="#3e2723"/><path d="M24 58 Q32 62 40 58 L38 62 L26 62 Z" fill="#f5f5f5"/></svg>`,
+            `<svg viewBox="0 0 64 64" class="w-full h-full"><circle cx="32" cy="32" r="30" fill="#c8e6c9" stroke="#000" stroke-width="2"/><path d="M18 26 Q32 16 46 26 L46 30 Q32 28 18 30 Z" fill="#fff" stroke="#000" stroke-width="2"/><path d="M22 24 Q32 20 42 24" stroke="#ddd" stroke-width="1" fill="none"/><circle cx="28" cy="36" r="2" fill="#000"/><circle cx="36" cy="36" r="2" fill="#000"/><path d="M30 42 Q32 44 34 42" stroke="#000" stroke-width="2" fill="none"/></svg>`,
+            `<svg viewBox="0 0 64 64" class="w-full h-full"><circle cx="32" cy="32" r="30" fill="#ffcdd2" stroke="#000" stroke-width="2"/><path d="M16 30 Q32 10 48 30 Q46 36 44 32 Q32 20 20 32 Q18 36 16 30" fill="#424242"/><circle cx="28" cy="36" r="2" fill="#000"/><circle cx="36" cy="36" r="2" fill="#000"/><path d="M28 44 Q32 46 36 44" stroke="#000" stroke-width="2" fill="none"/></svg>`,
+            `<svg viewBox="0 0 64 64" class="w-full h-full"><circle cx="32" cy="32" r="30" fill="#f8bbd0" stroke="#000" stroke-width="2"/><path d="M20 20 Q32 10 44 20 L48 50 Q32 60 16 50 Z" fill="#ce93d8"/><path d="M24 24 Q32 20 40 24 Q40 40 32 44 Q24 40 24 24 Z" fill="#ffccaa"/><circle cx="28" cy="32" r="2" fill="#000"/><circle cx="36" cy="32" r="2" fill="#000"/><path d="M30 38 Q32 40 34 38" stroke="#000" stroke-width="2" fill="none"/></svg>`,
+            `<svg viewBox="0 0 64 64" class="w-full h-full"><circle cx="32" cy="32" r="30" fill="#e1bee7" stroke="#000" stroke-width="2"/><path d="M18 20 Q32 5 46 20 L48 60 Q32 65 16 60 Z" fill="#212121"/><path d="M24 26 Q32 22 40 26 Q40 42 32 46 Q24 42 24 26 Z" fill="#f1c27d"/><circle cx="28" cy="34" r="2" fill="#000"/><circle cx="36" cy="34" r="2" fill="#000"/><path d="M30 40 Q32 42 34 40" stroke="#000" stroke-width="2" fill="none"/></svg>`
+        ];
+
+        let selectedAvatarIndex = 0;
+        let editAvatarIndex = 0;
+        let isAdmin = false;
+        let currentGalleryImageKey = null;
+        let currentRating = 5;
+        let currentEditRating = 5;
+
+        // --- WELCOME & UPLOAD LOGIC ---
+        function saveWelcomeSettings() {
+            const settings = {
+                enabled: document.getElementById('welcome-active').checked,
+                text: document.getElementById('welcome-msg-input').value,
+                link: document.getElementById('welcome-link-input').value,
+                showOnce: document.getElementById('welcome-once').checked
+            };
+            db.ref('settings/welcome').set(settings).then(() => alert('تم حفظ إعدادات الرسالة!'));
+        }
+        function checkWelcomeMessage() {
+            db.ref('settings/welcome').once('value', (snapshot) => {
+                const data = snapshot.val();
+                if (data && data.enabled) {
+                    if (data.showOnce && localStorage.getItem('seen_welcome_msg')) return;
+                    document.getElementById('welcome-text').innerText = data.text || "أهلاً بك!";
+                    const btn = document.getElementById('welcome-btn');
+                    if (data.link && data.link.trim() !== "") { btn.href = data.link; btn.classList.remove('hidden'); } else { btn.classList.add('hidden'); }
+                    document.getElementById('welcome-modal').classList.remove('hidden');
+                }
+            });
+        }
+        function closeWelcomeModal() { document.getElementById('welcome-modal').classList.add('hidden'); localStorage.setItem('seen_welcome_msg', 'true'); }
+        function uploadToImgBB() {
+            const file = document.getElementById('gallery-upload').files[0];
+            const loader = document.getElementById('upload-loader');
+            if (!file) return alert('اختر صورة أولاً');
+            loader.style.display = 'block';
+            const formData = new FormData(); formData.append("image", file);
+            fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`, { method: "POST", body: formData })
+            .then(r => r.json()).then(data => {
+                if(data.success) db.ref('gallery').push({ url: data.data.url, timestamp: firebase.database.ServerValue.TIMESTAMP }).then(() => { loader.style.display = 'none'; alert('تم الرفع!'); });
+                else throw new Error('فشل الرفع');
+            }).catch(e => { loader.style.display = 'none'; alert(e.message); });
+        }
+        function loadGallery() {
+            db.ref('gallery').on('value', (snapshot) => {
+                const container = document.getElementById('thumbnails-container');
+                container.innerHTML = '';
+                const data = snapshot.val();
+                if (!data) { container.innerHTML = '<p class="text-sm">لا توجد صور.</p>'; return; }
+                const images = Object.entries(data).reverse();
+                if (images.length > 0 && !currentGalleryImageKey) {
+                    const randomIndex = Math.floor(Math.random() * images.length);
+                    changeMainImage(images[randomIndex][1].url, images[randomIndex][0]);
+                }
+                images.forEach(([key, val]) => {
+                    const img = document.createElement('img'); img.src = val.url; img.className = "w-24 h-24 object-cover border-2 border-black dark:border-gray-500 cursor-pointer hover:opacity-100 opacity-60 rounded transition-all";
+                    img.onclick = () => changeMainImage(val.url, key); container.appendChild(img);
+                });
+            });
+        }
+        function changeMainImage(url, key) {
+            document.getElementById('current-img').src = url; currentGalleryImageKey = key;
+            document.querySelectorAll('#thumbnails-container img').forEach(img => { img.classList.add('opacity-60'); if(img.src === url) img.classList.remove('opacity-60'); });
+            const deleteBtn = document.getElementById('delete-img-btn');
+            if (isAdmin && key) deleteBtn.classList.remove('hidden'); else deleteBtn.classList.add('hidden');
+        }
+        function deleteCurrentImage() {
+            if (!isAdmin || !currentGalleryImageKey) return;
+            if (confirm('حذف هذه الصورة؟')) db.ref('gallery/' + currentGalleryImageKey).remove().then(() => { alert('تم الحذف'); currentGalleryImageKey = null; });
+        }
+
+        // --- Rating Functions ---
+        function setRating(n) { currentRating = n; updateStarVisuals('rating-stars', n); }
+        function setEditRating(n) { currentEditRating = n; updateStarVisuals('edit-rating-stars', n); }
+        function updateStarVisuals(containerId, rating) {
+            const container = document.getElementById(containerId);
+            const stars = container.getElementsByTagName('i');
+            for (let i = 0; i < stars.length; i++) {
+                if (i < rating) { stars[i].classList.remove('inactive'); stars[i].classList.add('active'); }
+                else { stars[i].classList.remove('active'); stars[i].classList.add('inactive'); }
+            }
+        }
+        function getStarString(rating) {
+            let stars = '';
+            for(let i=0; i<5; i++) {
+                stars += i < rating ? '<i class="fas fa-star text-yellow-400 text-xs"></i>' : '<i class="fas fa-star text-gray-300 dark:text-gray-600 text-xs"></i>';
+            }
+            return stars;
+        }
+
+        // --- Comment Logic ---
+        function openModal() {
+            document.getElementById('comment-modal').classList.remove('hidden');
+            renderAvatarSelection('avatar-grid', (idx) => selectedAvatarIndex = idx, selectedAvatarIndex);
+            setRating(5); 
+        }
+        function closeModal() {
+            document.getElementById('comment-modal').classList.add('hidden');
+            document.getElementById('step-1').classList.remove('hidden');
+            document.getElementById('step-2').classList.add('hidden');
+        }
+        function renderAvatarSelection(containerId, callback, currentSelection) {
+            const grid = document.getElementById(containerId); grid.innerHTML = '';
+            avatars.forEach((svg, index) => {
+                const div = document.createElement('div'); div.className = `avatar-container border-4 cursor-pointer p-1 ${currentSelection === index ? 'border-blue-600 bg-blue-100 dark:bg-blue-900' : 'border-gray-300 dark:border-gray-600'}`; div.innerHTML = svg;
+                div.onclick = () => { callback(index); renderAvatarSelection(containerId, callback, index); }; grid.appendChild(div);
+            });
+        }
+        function goToStep2() {
+            if (!document.getElementById('input-name').value.trim()) return alert('اكتب اسمك الأول يا بطل!');
+            document.getElementById('step-1').classList.add('hidden'); document.getElementById('step-2').classList.remove('hidden');
+        }
+        function backToStep1() { document.getElementById('step-2').classList.add('hidden'); document.getElementById('step-1').classList.remove('hidden'); }
+        function getRandomHeartSVG() {
+             const colors = [{c1:'#FF00CC', c2:'#333399'}, {c1:'#00F260', c2:'#0575E6'}, {c1:'#fc4a1a', c2:'#f7b733'}];
+             const colorPair = colors[Math.floor(Math.random() * colors.length)];
+             const id = Date.now() + Math.random().toString(36).substring(2);
+             return `<svg viewBox="0 0 24 24"><defs><linearGradient id="g${id}" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="${colorPair.c1}"/><stop offset="100%" stop-color="${colorPair.c2}"/></linearGradient></defs><path d="M12 2L2 12l10 10 10-10L12 2z" fill="url(#g${id})" stroke="#000" stroke-width="1.5"/></svg>`;
+        }
+        function saveMyCommentId(key) { let myComments = JSON.parse(localStorage.getItem('my_comments') || '[]'); myComments.push(key); localStorage.setItem('my_comments', JSON.stringify(myComments)); }
+        function isMyComment(key) { let myComments = JSON.parse(localStorage.getItem('my_comments') || '[]'); return myComments.includes(key); }
+
+        function submitComment() {
+            const name = document.getElementById('input-name').value.trim();
+            const msg = document.getElementById('input-msg').value.trim();
+            if (!msg) return alert('الرسالة فارغة!');
+            const newComment = {
+                name: name, avatarIndex: selectedAvatarIndex, message: msg, likes: 0,
+                rating: currentRating,
+                heartSVG: getRandomHeartSVG(), timestamp: firebase.database.ServerValue.TIMESTAMP
+            };
+            db.ref('comments').push(newComment).then((snap) => {
+                saveMyCommentId(snap.key); closeModal(); document.getElementById('input-name').value = ''; document.getElementById('input-msg').value = ''; playSound();
+                setTimeout(() => { document.getElementById('guestbook').scrollIntoView({ behavior: 'smooth' }); }, 500);
+            });
+        }
+
+        function loadComments() {
+            const container = document.getElementById('comments-container');
+            db.ref('comments').on('value', (snapshot) => {
+                container.innerHTML = '';
+                const data = snapshot.val();
+                if (!data) { container.innerHTML = '<div class="col-span-full text-center text-gray-400 dark:text-gray-500">كن أول من يكتب هنا!</div>'; return; }
+                Object.entries(data).reverse().forEach(([key, val]) => {
+                    const div = document.createElement('div');
+                    div.className = "noselect bg-white dark:bg-gray-800 border-4 border-black dark:border-gray-500 p-4 flex items-start gap-4 shadow-neo dark:shadow-none hover:shadow-neo-hover transition-all relative group";
+                    let pressTimer;
+                    div.addEventListener('touchstart', function(e) { pressTimer = setTimeout(() => handleLongPress(key, val), 800); });
+                    div.addEventListener('touchend', function(e) { clearTimeout(pressTimer); });
+                    div.addEventListener('mousedown', function(e) { pressTimer = setTimeout(() => handleLongPress(key, val), 800); });
+                    div.addEventListener('mouseup', function(e) { clearTimeout(pressTimer); });
+
+                    let controls = '';
+                    if (isAdmin) controls = `<div class="absolute top-2 left-2 flex gap-2"><button onclick="deleteComment('${key}')" class="bg-red-500 text-white text-xs px-2 py-1 border-2 border-black dark:border-white">X</button><button onclick="openEditModal('${key}', '${val.name}', '${val.message}', ${val.likes}, ${val.avatarIndex}, ${val.timestamp}, ${val.rating || 5})" class="bg-yellow-400 text-black text-xs px-2 py-1 border-2 border-black dark:border-white">E</button></div>`;
+                    
+                    div.innerHTML = `${controls}<div class="avatar-container w-16 h-16 flex-shrink-0 border-2 border-black dark:border-gray-500 bg-gray-100 dark:bg-gray-600 overflow-hidden rounded-full">${avatars[val.avatarIndex]}</div><div class="flex-grow"><h4 class="font-black text-lg text-blue-800 dark:text-blue-300 leading-none mb-1">${val.name}</h4><div class="mb-1">${getStarString(val.rating || 5)}</div><p class="text-sm font-bold break-words leading-tight bg-gray-50 dark:bg-gray-700 p-1 border border-gray-200 dark:border-gray-600 dark:text-white">${val.message}</p></div><div class="flex flex-col items-center justify-center gap-1 cursor-pointer" onclick="likeComment('${key}')"><div class="w-10 h-10 transition-transform active:scale-90" id="heart-${key}">${val.heartSVG}</div><span class="font-black text-xs border-2 border-black dark:border-gray-500 px-1 bg-yellow-200 dark:bg-gray-700 dark:text-white">${val.likes}</span></div>`;
+                    container.appendChild(div);
+                });
+            });
+        }
+
+        function handleLongPress(key, val) {
+            if (isMyComment(key) || isAdmin) {
+                const now = Date.now();
+                if (!isAdmin && (now - val.timestamp > 300000)) { alert('عذراً، انتهت مهلة التعديل (5 دقائق من النشر).'); return; }
+                openEditModal(key, val.name, val.message, val.likes, val.avatarIndex, val.timestamp, val.rating || 5);
+            }
+        }
+        function likeComment(key) { const heartElem = document.getElementById(`heart-${key}`); if(heartElem) { heartElem.classList.add('heart-pop'); setTimeout(() => heartElem.classList.remove('heart-pop'), 300); } db.ref('comments/' + key + '/likes').transaction((curr) => (curr || 0) + 1); playSound(); }
+        function checkAdmin() {
+            if (document.getElementById('admin-pass').value === 'meme2003') {
+                isAdmin = true; document.getElementById('admin-login-section').classList.add('hidden'); document.getElementById('admin-panel-section').classList.remove('hidden');
+                db.ref('settings/welcome').once('value', (snapshot) => { const data = snapshot.val(); if(data) { document.getElementById('welcome-active').checked = data.enabled; document.getElementById('welcome-msg-input').value = data.text; document.getElementById('welcome-link-input').value = data.link; document.getElementById('welcome-once').checked = data.showOnce; } });
+                alert('أهلاً بك يا زعيم!'); loadComments(); loadGallery(); document.getElementById('upload-control-panel').classList.remove('hidden');
+            } else { alert('كلمة السر خطأ!'); }
+        }
+        function deleteComment(key) { if (confirm('حذف نهائي؟')) db.ref('comments/' + key).remove(); }
+        function deleteCommentFromModal() { const key = document.getElementById('edit-id').value; if (confirm('حذف؟')) { db.ref('comments/' + key).remove().then(() => { document.getElementById('edit-modal').classList.add('hidden'); }); } }
+
+        function openEditModal(key, name, msg, likes, avatarIdx, timestamp, rating) {
+            document.getElementById('edit-modal').classList.remove('hidden'); 
+            document.getElementById('edit-id').value = key; 
+            document.getElementById('edit-name').value = name; 
+            document.getElementById('edit-msg').value = msg;
+            editAvatarIndex = avatarIdx || 0;
+            renderAvatarSelection('edit-avatar-grid', (idx) => editAvatarIndex = idx, editAvatarIndex);
+            
+            // Setup Edit Rating
+            setEditRating(rating);
+            const starContainer = document.getElementById('edit-rating-stars');
+            starContainer.innerHTML = '';
+            for(let i=1; i<=5; i++) {
+                const iTag = document.createElement('i');
+                iTag.className = `fas fa-star ${i <= rating ? 'active' : 'inactive'}`;
+                iTag.onclick = () => setEditRating(i);
+                starContainer.appendChild(iTag);
+            }
+
+            const likesField = document.getElementById('admin-likes-field');
+            if(isAdmin) { likesField.classList.remove('hidden'); document.getElementById('edit-likes').value = likes; } else { likesField.classList.add('hidden'); document.getElementById('edit-likes').value = likes; }
+        }
+        
+        function saveEdit() {
+            const updates = { 
+                name: document.getElementById('edit-name').value, 
+                message: document.getElementById('edit-msg').value, 
+                avatarIndex: editAvatarIndex,
+                rating: currentEditRating
+            };
+            if(isAdmin) { updates.likes = parseInt(document.getElementById('edit-likes').value); }
+            db.ref('comments/' + document.getElementById('edit-id').value).update(updates).then(() => document.getElementById('edit-modal').classList.add('hidden'));
+        }
+        function playSound() { new Audio("data:audio/wav;base64,UklGRl9vT19XQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YU").play().catch(e=>{}); }
+    </script>
+</body>
+</html>
