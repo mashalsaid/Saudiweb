@@ -10,10 +10,6 @@
     <meta property="og:url" content="https://mashalsaid.github.io/Saudiweb/">
     <meta property="og:type" content="website">
 
-    <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="Saudi - سـعـودي">
-    <meta name="twitter:description" content="موقعي الشخصي تعال خدلك لفه ياخويا 😏">
-    <meta name="twitter:image" content="https://raw.githubusercontent.com/mashalsaid/Saudiweb/main/profile.jpg">
     <title>Saudi - سـعـودي</title>  
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">  
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">  
@@ -275,12 +271,14 @@
         initTheme();  
     } catch (e) { console.error("Firebase Error:", e); }  
 
-    // --- Dark Mode Logic ---  
+    // --- Dark Mode Logic (Updated to Force White Default) ---  
     function initTheme() {  
-        if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {  
+        // إذا كان المستخدم قد اختار الوضع الليلي سابقاً، نفعل الوضع الليلي
+        if (localStorage.theme === 'dark') {  
             document.documentElement.classList.add('dark');  
             document.getElementById('theme-icon').classList.replace('fa-moon', 'fa-sun');  
         } else {  
+            // في أي حالة أخرى (زائر جديد أو اختار الأبيض)، نفرض الوضع الأبيض
             document.documentElement.classList.remove('dark');  
             document.getElementById('theme-icon').classList.replace('fa-sun', 'fa-moon');  
         }  
